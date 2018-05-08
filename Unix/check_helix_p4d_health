@@ -1,0 +1,573 @@
+#! /bin/bash
+###############################################################################
+# Copyright (c) Perforce Software, Inc., 2007-2016. All rights reserved
+# 
+# Redistribution and use in source and binary forms, with or without
+# modification, are permitted provided that the following conditions are met:
+# 
+# 1  Redistributions of source code must retain the above copyright
+#    notice, this list of conditions and the following disclaimer.
+# 
+# 2.  Redistributions in binary form must reproduce the above copyright
+#     notice, this list of conditions and the following disclaimer in the
+#     documentation and/or other materials provided with the distribution.
+# 
+# THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+# "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT
+# LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS
+# FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL PERFORCE
+# SOFTWARE, INC. BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL,
+# SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT
+# LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE,
+# DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON
+# ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR 
+# TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF 
+# THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH
+# DAMAGE.
+###############################################################################
+#
+# Last Modified: $Date: 2016/03/24 $
+# Submitted by: $Author: karl_wirth $
+# Revision: $Revision: #3 $
+#
+# Usage:
+#
+USAGE=" Usage:
+  check_helix_p4d_health -p <p4port> [options] [tests]
+
+        options: [-u <p4-user>] [-T <p4-ticket-file-name>] [-P <p4-password>] 
+                 [-t <p4trust-file>] [--tips] [--comment] [--version] [--help]
+
+        tests:   [--all]
+                 [--remoteonly]
+                 [--licensecheck]  [--licthreshold <expire-days-threshold>]
+                 [--pidcheck] [--pidthreshold <running-p4-pid-threshold>] 
+                 [--p4monitorcheck] [--monthreshold <p4-processes-threshold>]
+                 [--p4diskcheck] [--diskthreshold <disk-used-threshold>]
+                 [--p4repcheck]
+
+         dependencies: The plugin relies on 'p4' being installed on the 
+                       machine executing the plugin.
+
+    Nagios plugins are required to only output one line of text. The '--tips'
+    flag can be used to display full error/status output and a helpful tip
+    to help find the cause or solve the problem.
+
+    The '-u' flag specifies the P4D user name. This user must be an 'operator'
+    user or must have 'super' access to the P4D server
+
+    The '-p' flag specifies the P4D hostname and port in the 
+    format 'hostname:port'.
+
+    The '-t' flag specifies the location of the P4TRUST file for SSL 
+    connections.
+    
+    The '-T' flag specifies the location of the tickets file.
+
+    The '-P' flag explicitly sets the password to use. Note this may not be 
+    secure and the use of 'p4 login' and a tickets file ('-T') on the server 
+    provides better security.
+
+    If no tests are specified then only the P4D server online test is run.
+    Multiple test arguments can be supplied. Thresholds can be supplied
+    with specific tests or when using '--all' or '--remoteonly'. 
+
+    The '--all' flag runs all tests. 
+
+    The '--remoteonly' flag runs only remote tests using the p4 client. These
+    tests can be run from any machine with network access to the P4D server 
+    (including the Nagios server).
+
+    The '--licensecheck' flag tests if the license file is nearing it's 
+    expiry date.  By default it checks for expiry within '30' days but this 
+    can be overriden with the '--licthreshold' flag.
+
+    The '--p4diskcheck' flag checks for free disk space on the P4D drives using
+    the Perforce command 'p4 diskspace' and warns if the disks are over 95% used.
+    This value can be overriden by speciying a value between 0 and 99 using with 
+    the '--diskthreshold' flag.
+    
+    The '--pidcheck' flag counts the number of connected p4d processes using 
+    'netstat' and warns if the are over 500 processes running. This value can 
+    be overriden with the '--pidthreshold' flag. This test must be run on the 
+    P4D server machine.
+
+    The '--p4monitorcheck' flag counts the number of commands in the 
+    'p4 monitor' table and warns if there are over 500 running. This value can be 
+    overriden with the '--monthreshold' flag.
+
+    The '--p4repcheck' flags (REPLICA ONLY) checks that replication is running.
+
+    The '--message' flag allows you to prepend an alert with a custom message.
+"
+# Description:
+#
+DESCRIPTION="Helix P4D health checker - Example Nagios monitoring script"
+#
+# This plugin will run the following checks against your Helix P4D server:
+#   - Online?
+#   - Licensed and not expiring soon
+#   - P4D process count in acceptable range
+#   - P4D monitor count in acceptable range
+#   - Disk space available on P4D volumes
+#   - Replication OK?
+#
+# Output:
+#
+# Notes:
+#
+# Examples:
+#
+# Run all checks against server on localhost:1666
+#
+#  check_helix_p4d_health -p localhost:1666 --all
+#
+# Check if license will expire in next 45 days
+#
+#  check_helix_p4d_health -p localhost:1666 --licensecheck -licthreshold 45
+#
+# Multiple arguments can be combined to run multiple tests
+#
+#  check_helix_p4d_health -p localhost:1666 --licensecheck --p4diskcheck
+#
+###############################################################################
+
+# Uncomment and customise the following lines if you will NOT be using command 
+# line arguments to control the script behavior.
+# Note: You need to specify P4PORT and P4USER as a minimum configuration
+# P4PORT=perforce:1666
+# P4USER=operator
+# P4TICKETS=/etc/nagios/.p4tickets
+# P4TRUST=/etc/nagios/.p4trust
+
+
+# Defaults - Can edit these or override at command prompt
+LICEXPIRE=30
+PIDCOUNT=100
+MONCOUNT=100
+LOWDISKSPACE=95
+TIPS=false
+
+# Define binary information
+PROGNAME=$0
+P4BIN=/usr/bin/p4
+
+# Set return states values
+STATE_OK=0
+STATE_WARNING=1
+STATE_CRITICAL=2
+STATE_UNKNOWN=3
+EXITSTATUS=${STATE_OK}
+
+###############################################################################
+# Helper functions 
+###############################################################################
+
+set_status(){ if [ ${1} -gt ${EXITSTATUS} ]; then EXITSTATUS=${1}; fi; }
+
+echo_tip(){ if [ "${TIPS}" == "true" ]; then echo "TIP:";echo "${1}"; fi; }
+
+echo_message(){ if [ "${TIPS}" == "true" ]; then echo "${1}"; fi; }
+
+get_word(){ echo ${1} | cut -f${2} -d" "; }
+
+print_usage(){ echo "${USAGE}"; }
+
+test_num() { 
+    if [ "${1//[0-9]}" != "" ] || [ -z "${1}" ]
+    then  
+        echo "Unknown argument: $1"
+        print_usage
+        exit ${STATE_UNKNOWN}
+    fi
+}
+
+print_help() {
+    echo ${PROGNAME} $Revision: #3 $
+    echo ""
+    echo " Description: ${DESCRIPTION}"
+    echo ""
+    print_usage
+    echo ""
+}
+
+run_p4()
+{
+    LOCALRESULT=$(${P4BIN} -p "${P4PORT}" -u "${P4USER}" "${@:2}" 2>&1)
+    RETVALUE=$?
+    case "${LOCALRESULT}" in
+#        *"Your session has expired, please login again.")
+        *"Your session has expired, please login again."*)
+             echo "WARNING: ${1} check P4D user ${P4USER} is not logged in."
+             exit ${STATE_WARNING};
+             ;;
+        *"doesn't exist."*)
+             echo "WARNING: ${1} check using invalid P4USER ${P4USER}."
+             exit ${STATE_WARNING};
+             ;;
+        *"Perforce password (P4PASSWD) invalid or unset.")
+             echo "WARNING: ${1} check P4D user ${P4USER} is not logged in."
+             exit ${STATE_WARNING};
+             ;;
+        *"Unknown command."*)
+             echo "WARNING: ${1} check ran unsupported command p4 ${2}."
+             exit ${STATE_WARNING};
+             ;;
+        *"p4 is Perforce's client tool for the command line.  Try:"*)
+             echo "WARNING: ${1} check used invalid command p4 ${@:2}." 
+             exit ${STATE_WARNING};
+             ;;
+        *"The authenticity of"*)
+             echo "WARNING: User running ${1} check needs to trust this P4D server."
+             exit ${STATE_WARNING};
+             ;;
+        *"You don't have permission for this operation."*)
+             echo "WARNING: ${1} check P4D user ${P4USER} does not have permissions to run p4 ${@:2}." 
+             exit ${STATE_WARNING};
+             ;;
+        *"Remove SSL protocol prefix from P4PORT."*)
+             echo "WARNING: Need to connect to this P4D without using ssl prefix."
+             exit ${STATE_WARNING};
+             ;;
+        *"Failed client connect, server using SSL."*)
+             echo "WARNING: Need to connect to this P4D using ssl."
+             exit ${STATE_WARNING};
+             ;;
+        *"WARNING P4PORT IDENTIFICATION HAS CHANGED!"*)
+             echo "WARNING: Nagios user needs to run 'p4 trust -yf' against this P4D."
+             exit ${STATE_WARNING};
+             ;;
+        *)
+             RESULT="${LOCALRESULT}"
+             ;;
+    esac
+    return ${RETVALUE}
+}
+
+###############################################################################
+# Tests start here
+###############################################################################
+
+license_check() {
+        LICENSE_EXPIRE_TIP="Please contact sales@perforce.com to request
+a new license file.
+"
+        run_p4 "License" info
+        LICENSE_LINE=$(echo "${RESULT}" | grep 'Server license\:')
+        if [ $(echo ${LICENSE_LINE} | grep ': none'|wc -l) -gt 0 ]
+        then 
+                echo "WARNING: P4D server on ${P4PORT} is unlicensed."
+                set_status ${STATE_WARNING}
+        else
+                EXPIRES=$(echo ${LICENSE_LINE}| cut -f2 -d"(" | cut -f1 -d")"|rev|cut -f1 -d " "|rev)
+                EXPIRES_SEC=$(date -ud ${EXPIRES} +'%s')
+
+                TIME_LEFT=0;
+                TODAY=$(date +'%s')
+                ((TIME_LEFT=(${EXPIRES_SEC} - ${TODAY})/60/60/24))
+                if [ ${TIME_LEFT} -lt ${LICEXPIRE} ]
+                then
+                        echo "WARNING: License expires in ${TIME_LEFT} days."
+                        echo_tip "${LICENSE_EXPIRE_TIP}"
+                        set_status ${STATE_WARNING}
+                fi
+        fi
+}
+
+server_up() {
+    SERVERDOWN_TIP="Check if the 'p4d' process is running on the box.
+Check the P4D log file for errors if it unexpectedly
+stopped.
+"
+    run_p4 "P4D" info
+    SERVERUP=`echo ${RESULT} | grep "Server license" | wc -l`
+
+    case $SERVERUP in
+         [1])
+           ;;
+         *)
+           echo "CRITICAL: P4D server not responding!"
+           echo_message "${RESULT}"
+           echo_tip "${SERVERDOWN_TIP}"
+           set_status ${STATE_CRITICAL}
+           ;;
+    esac
+}
+
+
+pid_check(){
+    PIDCHECK_TIP="This may be caused by a performance problem or by
+a script that has gone wild. Use 'netstat -anp'
+and 'p4 monitor show -ael' to find the patterns. 
+Often the majority of connections will be from 
+the same client address or user.
+"
+
+    PIDS=$(netstat -anp 2>&1 | grep ${P4PORT} | wc -l)
+    if [ ${PIDS} -gt ${PIDCOUNT} ] 
+    then 
+        echo "WARNING: ${PIDS} running p4d pids exceeded threshold ${PIDCOUNT}."
+        echo_tip "${PIDCHECK_TIP}"
+        set_status ${STATE_WARNING}
+    fi
+}
+
+p4monitor_check() {
+    P4MONCHECK_TIP="This may be caused by a performance problem or by
+a script that has gone wild. Run 'p4 monitor -ael'
+and look if most of the commands are run by the
+same user or if there is one very long running
+command. If you need assistance collect the
+'p4 monitor -ael' output and the P4D log
+file and send them to 'support@perforce.com'.
+"
+
+    run_p4 "Monitor" monitor show -ael
+    if [ "${RESULT}" == "Monitor not currently enabled." ]
+    then
+        echo "WARNING: p4 monitor not enabled on this system."
+        echo_tip "Enable monitoring with 'p4 configure set monitor=1'"
+        set_status ${STATE_WARNING}
+    else
+        P4DRUNNING=$(echo "${RESULT}" | wc -l)
+        if [ ${P4DRUNNING} -gt ${MONCOUNT} ] 
+        then 
+            echo "WARNING: ${P4DRUNNING} running p4d commands exceeded threshold $MONCOUNT."
+            echo_tip "${P4MONCHECK_TIP}"
+            set_status ${STATE_WARNING}
+        fi 
+    fi 
+}
+
+p4replication_check() {
+# --replication-status is not worth using. Back to edge tests...
+# Great example of error....
+# $ p4 pull -l -j
+# Perforce password (P4PASSWD) invalid or unset.
+# Perforce password (P4PASSWD) invalid or unset.
+# Current replica journal state is:     Journal 5,      Sequence 11400.
+# Current master journal state is:      Journal 5,      Sequence -1.
+# Current master journal state is:      Journal 0,      Sequence -1.
+# The statefile was last modified at:   2016/03/21 11:40:03.
+# The replica server time is currently: 2016/03/21 11:46:44 +0000 GMT
+#
+# On Commit:
+#    Pull only allowed on replica servers.
+#
+    P4REPCHECK_TIP="There may be a problem with the journal
+file on the master or the replica may
+have been switched off. Check if the P4D
+is runnning on the replica, that the 
+replica has network connectivity to the 
+master server and that there are no
+errors in the replica log file.
+"
+
+   run_p4 "Replication" pull -l -j
+   case "${RESULT}" in
+       *"Pull only allowed on replica servers"*) 
+            # It's a master/commit so no test needed.
+            set_status ${STATE_OK}
+            ;;
+       *"Remote server refused request"*)
+            echo "CRITICAL: Master server is not available."
+            echo_tip "Check if P4D is running on the master server
+and that P4TARGET is correct by running 
+'p4 configure show'."
+            set_status ${STATE_CRITICAL}
+            echo_message "${RESULT}"
+            ;;
+       *"Perforce password (P4PASSWD) invalid or unset."*)
+            echo "CRITICAL: Replication user is no longer logged in."
+            echo_tip "Log the replication user into the master server
+from the replica."
+            set_status ${STATE_CRITICAL}
+            echo_message "${RESULT}"
+            ;;
+       *"Sequence -1"*)
+            echo "CRITICAL: Replication failed. Replica is unable to access master journal."
+            echo_tip "Check if journal on master has been moved or compressed."
+            set_status ${STATE_CRITICAL}
+            echo_message "${RESULT}"
+            ;;
+       *"WARNING"*|*"CRITICAL"*)
+            echo "${RESULT}"
+            ;;
+       *)
+          if [ $( echo "${RESULT}" | grep Journal | wc -l ) -eq 3 ]
+          then
+             echo "CRITICAL: Replication has stalled."
+             echo_tip "Check if journal on master has been damaged or removed."
+             set_status ${STATE_CRITICAL}
+             echo_message "${RESULT}"
+          fi 
+   esac
+}
+
+p4disk_check() {
+    P4DISKCHECK_TIP="Failure to provide enough disk space for temporary
+actions may cause corruption of the Helix system
+or backups."
+    WARNING_NEEDED=0
+    run_p4 "Disk" diskspace 
+    if [ ${?} -eq 0 ]
+    then
+        while read LINE  
+        do 
+           VOLUME=$( get_word "${LINE}" 1 )
+           USED=$( get_word "${LINE}" 11 | cut -f2 -d "("|cut -f1 -d "%")
+           if [ ${USED} -ge ${LOWDISKSPACE} ]
+           then
+               DISKSTATS="${DISKSTATS}${USED}% on ${VOLUME} volume.
+"
+               set_status ${STATE_WARNING}
+               WARNING_NEEDED=1
+           fi
+        done <<< "${RESULT}"
+        if [ "${WARNING_NEEDED}" -eq 1 ] 
+        then 
+           echo "WARNING: Disk space too low for P4D."
+           echo_message "${DISKSTATS}"
+           echo_tip "${P4DISKCHECK_TIP}"
+        fi
+     else
+        echo $RESULT
+        set_status ${STATE_WARNING}
+        #EXITSTATUS=${STATE_WARNING}
+    fi 
+}
+
+
+###############################################################################
+# Main()
+###############################################################################
+EXITSTATUS=${STATE_OK} #default
+
+# Process arguments
+while test -n "${1}"; do
+    case "${1}" in
+        --help|--version|-h|-V)
+            print_help
+            exit ${STATE_OK}
+            ;;
+        -u)
+            P4USER=${2}
+            shift
+            ;;
+        -p)
+            P4PORT=${2}
+            shift
+            ;;
+        -P)
+            P4PASSWD=${2}
+            shift
+            ;;
+        -T)
+            export P4TICKETS=${2}
+            shift
+            ;;
+        -t)
+            export P4TRUST=${2}
+            shift
+            ;;
+        --pidcheck)
+            PIDCHECK=true
+            ;;
+        --pidthreshold)
+            test_num ${2}
+            PIDCOUNT=${2}
+            shift
+            ;;
+        --p4diskcheck)
+            P4DISKCHECK=true
+            ;;
+        --diskthreshold)
+            test_num ${2}
+            LOWDISKSPACE=${2}
+            shift
+            ;;
+        --licensecheck)
+            LICCHECK=true
+            ;;
+        --licthreshold)
+            test_num ${2}
+            LICEXPIRE=${2}
+            shift
+            ;;
+        --p4monitorcheck)
+            P4MONCHECK=true
+            ;;
+        --monthreshold)
+            test_num ${2}
+            MONCOUNT=${2}
+            shift
+            ;;
+        --p4repcheck)
+            P4REPCHECK=true
+            ;;
+        --all)
+            LICCHECK=true
+            PIDCHECK=true
+            P4MONCHECK=true
+            P4DISKCHECK=true
+            P4REPCHECK=true
+            ;;
+        --remoteonly)
+            LICCHECK=true
+            P4MONCHECK=true
+            P4DISKCHECK=true
+            P4REPCHECK=true
+            ;;
+        --EXITSTATUS)
+            EXITSTATUS=${2}
+            exit ${EXITSTATUS}
+            shift
+            ;;
+        --message)
+            echo "${2}"
+            shift
+            ;;
+        --tips)
+            TIPS=true
+            ;;
+        --debug)
+            set -x
+            ;;
+        *)
+            echo "Unknown argument: $1"
+            print_usage
+            exit ${STATE_UNKNOWN}
+            ;;
+    esac
+    shift
+done
+
+# Setup p4 binary
+if [[ ! -f ${P4BIN} ]]; then echo "WARNING: ${P4BIN} is not executable. No checks run.";exit ${STATE_WARNING} ; fi
+
+# If values not set try and pick them up from the environment
+P4PORT=${P4PORT:-$(p4 set P4PORT | cut -f1 -d "(" | cut -f2-10 -d"=" )}
+P4USER=${P4USER:-$(p4 set P4USER | cut -f2 -d"=" | cut -f1 -d " ")}
+P4USER=${P4USER:-$(whoami) }
+P4TICKETS=${P4TICKETS:-$(p4 set P4TICKETS | cut -f2 -d"=" | cut -f1 -d " ")}
+P4TRUST=${P4TRUST:-$(p4 set P4TRUST | cut -f2 -d"=" | cut -f1 -d " ")}
+export P4PASSWD=${P4PASSWD:-$(p4 set P4PASSWD | cut -f2 -d"=" | cut -f1 -d " ")}
+
+#P4="${P4BIN} -p ${P4PORT} -u ${P4USER}"
+
+# Run tests
+server_up # Mandatory test
+if [ ${EXITSTATUS} -lt ${STATE_CRITICAL} ]
+then
+  if [ "${PIDCHECK}" == "true" ]; then pid_check; fi
+  if [ "${P4DISKCHECK}" == "true" ]; then p4disk_check; fi
+  if [ "${P4REPCHECK}" == "true" ]; then p4replication_check; fi
+  if [ "${P4MONCHECK}" == "true" ]; then p4monitor_check; fi
+  if [ "${LICCHECK}" == "true" ]; then license_check; fi
+fi
+ 
+# If no problems need to return something to make Nagios happy.
+if [ ${EXITSTATUS} -eq ${STATE_OK} ]; then echo "OK"; fi
+
+exit ${EXITSTATUS}
+

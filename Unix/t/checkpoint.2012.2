@@ -1,0 +1,123 @@
+@pv@ 1 @db.config@ @any@ @configurationVersion@ @1@ 
+@pv@ 1 @db.config@ @any@ @dm.user.noautocreate@ @1@ 
+@pv@ 1 @db.config@ @replica@ @P4LOG@ @replicaLog.txt@ 
+@pv@ 1 @db.config@ @replica@ @P4TARGET@ @localhost:1234@ 
+@pv@ 1 @db.config@ @replica@ @configurationVersion@ @18@ 
+@pv@ 1 @db.config@ @replica@ @db.replication@ @readonly@ 
+@pv@ 1 @db.config@ @replica@ @lbr.replication@ @readonly@ 
+@pv@ 1 @db.config@ @replica@ @monitor@ @1@ 
+@pv@ 1 @db.config@ @replica@ @server@ @4@ 
+@pv@ 1 @db.config@ @replica@ @serviceUser@ @serviceUser@ 
+@pv@ 1 @db.config@ @replica@ @startup.1@ @pull -i 1@ 
+@pv@ 1 @db.config@ @replica@ @startup.2@ @pull -u -i 1@ 
+@pv@ 1 @db.config@ @replica@ @startup.3@ @pull -u -i 1@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 1309906895 0 0 @db.counters@ @@ @@ @@ @@ 
+@pv@ 1 @db.counters@ @journal@ @1@ 
+@pv@ 1 @db.counters@ @lastCheckpointAction@ @1459467814 (2016/04/01 00:43:34 +0100 BST) checkpoint restored@ 
+@pv@ 1 @db.counters@ @upgrade@ @24@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.nameval@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.logger@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 2 33 -1805827107 0 0 @db.server@ @@ @@ @@ @@ 
+@pv@ 0 @db.server@ @master@ 0 @@ @@ 12035 @Created by karl_wirth.
+@ 
+@pv@ 0 @db.server@ @replica@ 0 @@ @@ 6637 @Created by karl_wirth.
+@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 7 33 0 0 0 @db.user.rp@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 7 33 237090766 0 0 @db.user@ @@ @@ @@ @@ 
+@pv@ 5 @db.user@ @operator@ @operator@@desktop@ @@ 1459282879 1459467589 @operator@ @B00CD76B76FDBECD1150F8A1A8C5D4C5@ 0 @B7B6150B9B1CC39509138D64DBCF3789@ 1459510789 2 1459356342 0 
+@pv@ 5 @db.user@ @service@ @service@@unknown@ @@ 1459283186 1459283186 @service@ @@ 0 @@ 0 0 0 0 
+@pv@ 5 @db.user@ @serviceUser@ @serviceUser@@test_ws@ @@ 1459357737 1459357737 @serviceUser@ @905928E8180D0171C3945D5413802A26@ 0 @7F71A381E46DC67044B6322D5F96F6EE@ 1459510789 1 0 0 
+@pv@ 5 @db.user@ @super@ @super@@desktop@ @@ 1459467233 1459467749 @super@ @@ 2 @@ 0 0 0 0 
+@pv@ 5 @db.user@ @test@ @test@@desktop@ @@ 1459282899 1459467590 @test@ @@ 0 @@ 0 0 0 0 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 8 33 0 0 0 @db.group@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 1718057289 0 0 @db.depot@ @@ @@ @@ @@ 
+@pv@ 1 @db.depot@ @depot@ 0 @@ @depot/...@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.stream@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 6 33 95110834 0 0 @db.domain@ @@ @@ @@ @@ 
+@pv@ 6 @db.domain@ @depot@ 100 @@ @@ @@ @@ @@ 1459282465 1459282465 0 @Default depot@ @@ @@ 0 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 2 33 0 0 0 @db.template@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.view.rp@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.view@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.review@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.integ@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.integed@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.resolve@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.resolvex@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 3 33 0 0 0 @db.have.rp@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 3 33 0 0 0 @db.have@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.label@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 2 33 0 0 0 @db.locks@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.archmap@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.rev@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.revcx@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.revdx@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.revhx@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.revsx@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.revsh@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.revbx@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 9 33 0 0 0 @db.revux@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 10 33 0 0 0 @db.working@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 10 33 0 0 0 @db.workingx@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.traits@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 3 33 0 0 0 @db.trigger@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 3 33 0 0 0 @db.change@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 3 33 0 0 0 @db.changex@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.desc@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.job@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.fix@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.fixrev@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 1 33 0 0 0 @db.bodtext@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.ixtext@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 4 33 -103498050 0 0 @db.protect@ @@ @@ @@ @@ 
+@pv@ 4 @db.protect@ 0 0 @*@ @*@ 31 0 @//...@ 
+@pv@ 4 @db.protect@ 1 0 @serviceUser@ @*@ 255 0 @//...@ 
+@pv@ 4 @db.protect@ 2 0 @super@ @*@ 255 0 @//...@ 
+@ex@ 10056 1459506777
+@nx@ 4 1459506777 @40@ 0 33 0 0 0 @db.message@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
+@nx@ 3 1459506777 @40@ 0 0 0 0 0 @@ @@ @@ @@ @@ 
+@ex@ 10056 1459506777
