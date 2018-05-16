@@ -217,7 +217,7 @@ More information on configuring NRPE can be found on the Nagios website.
 
 ## Test Harness
 
-The plugin has been tested on Ubuntu 14.04 and Linux Mint 17.1 with P4D 2016.1 Beta, P4D 2015.2 and P4D 2013.1. The test harness has been provided to allow it to easily be tested on other platforms with other P4D versions. The tests should be run from the plugin directory using:
+The plugin has been tested on Ubuntu 14.04 with P4D 2016.1 Beta, P4D 2015.2 and P4D 2013.1. The test harness has been provided to allow it to easily be tested on other platforms with other P4D versions. The tests should be run from the plugin directory using:
  
            perl t/check_helix_p4d_health.t
 
@@ -235,5 +235,5 @@ Additional P4D checks:
 
 Additional Helix checks:
 * Swarm checks.
-* Git Fusion checks.
+* Helix4Git checks.
 
