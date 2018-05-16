@@ -1,0 +1,5 @@
+Be sure to check out exchange.nagios.org for apache, certificate, php, Linux, and mail checks. check_http from the nagios-plugins suite should help plenty. https://support.nagios.com/kb/article.php?id=569 Compiling is pretty simple, but your OS may also have them packaged. The packages often lag the latest versions, and the packages may put the plugins in a directory unfamiliar to Nagios support techs.
+
+If you are concerned about monitoring visual elements, you may want to look at Selenium.
+
+Until this is complete, the API can be used for monitoring: https://www.perforce.com/perforce/doc.current/manuals/swarm/Content/Swarm/swarm-apidoc.html
